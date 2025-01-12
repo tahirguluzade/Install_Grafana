@@ -1,0 +1,49 @@
+---
+
+- hosts: database
+  vars:
+      user_home: tako
+  tasks:
+
+
+      - name: Download gpg key
+        ansible.builtin.get_url:
+          url: https://rpm.grafana.com/gpg.key
+          dest: "/home/{{user_home}}/gpg.key"
+
+      - name: Import a key from a file
+        ansible.builtin.rpm_key:
+          state: present
+          key: "/home/{{user_home}}/gpg.key"
+
+      - name: Create /etc/yum.repos.d/grafana.repo
+        ansible.builtin.yum_repository:
+         name: grafana
+         description: grafana
+         baseurl: https://rpm.grafana.com
+         repo_gpgcheck: true
+         enabled: true
+         gpgcheck: true
+         gpgkey: https://rpm.grafana.com/gpg.key
+         sslverify: true
+         sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+
+
+      - name: Install the latest version of grafana enterprise
+        ansible.builtin.yum:
+          name: grafana-enterprise
+          state: latest
+
+      - name: Start and enabled grafana service
+        ansible.builtin.service:
+          name: grafana-server
+          state: started
+          enabled: true
+
+      - name: Allow traffic in default zone on port 3000/tcp
+        ansible.posix.firewalld:
+          port: 3000/tcp
+          permanent: true
+          immediate: true
+          state: enabled
+
